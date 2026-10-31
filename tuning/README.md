@@ -104,6 +104,19 @@ cold boot (the first boot after the patch only writes the digest cache; the
 second one hits it). Compare segment by segment — an overall number hides which
 change did what.
 
+## Fork policy
+
+This is a personal fork; `main` here is the line that ships. Changes do not need
+to be acceptable upstream, so they may hardcode this device's geometry, drop
+other models, or change behaviour in ways a shared branch could not.
+
+- `origin` (`hesan1232/RetyOs`) — push target.
+- `upstream` (`Emokable/RetyOs`) — **fetch only**, its push URL is set to
+  `no_push` so an accidental `git push upstream` cannot reach the original repo.
+  Pulling author fixes is `git fetch upstream && git rebase upstream/main`.
+- No upstream issues or pull requests are opened from this fork. Findings and
+  measurements are recorded here in `tuning/` instead.
+
 ## Rollback
 
 Revert the commit, or restore the two loops and the two hashes by hand. There is
