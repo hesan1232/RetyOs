@@ -117,6 +117,39 @@ other models, or change behaviour in ways a shared branch could not.
 - No upstream issues or pull requests are opened from this fork. Findings and
   measurements are recorded here in `tuning/` instead.
 
+## Building an installer
+
+These changes are shell, and `tools/build_system.py:229-231` copies everything
+under `device/kindle-android/` into the installer verbatim. The 41-step
+`python build.py all` chain (Rust, NDK, JDK8, the API25 image) only produces
+`payload.tar.gz`, `gralloc.hwtcon.so`, `session-controller` and friends -- none of
+which this patch touches. So an installer can be produced without compiling:
+
+```sh
+# 1. patch the start.sh that ships inside the official installer
+python tuning/build/patch_release_start.py \
+    --base <official>/kindle-android/start.sh --out start.sh.patched
+
+# 2. substitute it and add tuning/ tools, streaming the 160 MB payload through
+python tuning/build/repack.py --base kindle-android-install.tar \
+    --repo . --start-sh start.sh.patched --out kindle-android-install-tuning.tar
+
+# 3. prove nothing else moved
+python tuning/build/verify_repack.py --base kindle-android-install.tar \
+    --new kindle-android-install-tuning.tar --expect-start-sh start.sh.patched
+```
+
+Step 1 patches the **release** copy, not `device/kindle-android/start.sh`. The
+v0.1.0-alpha.1 installer predates base commit 6beab033: it lacks the
+`requested_ns`/`start_ns` clamps, `KINDLE_RECOVERY_DEFER_REFRESH`, and the
+overlay-cleanup anchor assertion. Those additions belong to a newer
+session-controller build, so pairing them with the release binaries would be a
+mismatch. Patching in place keeps the script/binary pairing the author shipped.
+
+`verify_repack.py` fails if any entry other than `start.sh` and
+`build-manifest.json` changes, if `payload.tar.gz` stops matching its sidecar, if
+the manifest hashes go stale, or if any packaged script fails `sh -n`.
+
 ## Rollback
 
 Revert the commit, or restore the two loops and the two hashes by hand. There is
